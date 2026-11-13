@@ -1,0 +1,20 @@
+{
+  "name": "api-maggot",
+  "version": "2.0.0",
+  "private": true,
+  "description": "API MaggotKu: auth, kandang, budidaya, pakan, panen, penjualan, stok & foto",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "mysql2": "^3.11.5"
+  }
+}
