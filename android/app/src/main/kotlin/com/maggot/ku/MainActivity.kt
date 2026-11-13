@@ -1,4 +1,4 @@
-package com.example.maggotku
+package com.maggot.ku
 
 import io.flutter.embedding.android.FlutterActivity
 
