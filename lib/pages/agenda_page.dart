@@ -4,6 +4,7 @@ import '../theme.dart';
 import '../widgets/common.dart';
 import 'budidaya_pages.dart';
 import 'catatan_pages.dart';
+import 'pembeli_pages.dart';
 import 'stok_pakan_pages.dart';
 import '../audio/app_sounds.dart';
 
@@ -88,6 +89,7 @@ class _AgendaSheet extends StatelessWidget {
     'foto': (Icons.photo_camera_rounded, sky, 'Foto'),
     'stokpakan': (Icons.inventory_2_rounded, peach, 'Gudang'),
     'segar': (Icons.schedule_rounded, butter, 'Gudang'),
+    'tagih': (Icons.account_balance_wallet_rounded, pink, 'Tagih'),
   };
 
   @override
@@ -193,6 +195,7 @@ class _AgendaSheet extends StatelessWidget {
       // Tugas gudang pakan: catat pakan masuk / buang yang busuk.
       'stokpakan' => const PakanMasukPage(),
       'segar' => const PakanMasukPage(penyesuaian: true),
+      'tagih' => const PembeliPage(),
       'pakan' => CatatanFormPage(isPakan: true, initialBudidayaId: b!.id),
       'panen' => CatatanFormPage(isPakan: false, initialBudidayaId: b!.id),
       _ => BudidayaDetailPage(item: b!),

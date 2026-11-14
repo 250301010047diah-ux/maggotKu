@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'icon_finder.dart';
 import 'package:maggotku/data/app_state.dart';
 import 'package:maggotku/main.dart';
 import 'package:maggotku/pages/budidaya_pages.dart';
@@ -64,14 +65,14 @@ void main() {
     Navigator.of(t.element(find.text('AGENDA HARI INI'))).pop();
     await settle(t);
     // …lalu bisa dibuka lagi lewat lonceng.
-    await t.tap(find.byIcon(Icons.notifications_active_rounded));
+    await t.tap(findIcon(Icons.notifications_active_rounded));
     await settle(t);
     expect(find.text('AGENDA HARI INI'), findsOneWidget);
     Navigator.of(t.element(find.text('AGENDA HARI INI'))).pop();
     await settle(t);
 
     // Tab Jual dengan grid stok.
-    await t.tap(find.byIcon(Icons.payments_rounded).last);
+    await t.tap(findIcon(Icons.payments_rounded).last);
     await settle(t);
     await t.drag(find.byType(Scrollable).first, const Offset(0, -500));
     await settle(t);

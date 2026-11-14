@@ -5,6 +5,7 @@ import '../data/models.dart';
 import '../theme.dart';
 import '../widgets/charts.dart';
 import '../widgets/common.dart';
+import 'biaya_pages.dart';
 import 'catatan_pages.dart';
 import 'foto_pages.dart';
 import 'kandang_pages.dart';
@@ -179,7 +180,7 @@ class _BudidayaCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        const Icon(
+                        const AppIcon(
                           Icons.location_on_rounded,
                           size: 13,
                           color: muted,
@@ -242,7 +243,7 @@ class _BudidayaCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(icon, size: 12, color: muted),
+            AppIcon(icon, size: 12, color: muted),
             const SizedBox(width: 4),
             Flexible(
               child: Text(
@@ -389,7 +390,7 @@ class _BudidayaFormPageState extends State<BudidayaFormPage> {
                       controller: nama,
                       decoration: const InputDecoration(
                         labelText: 'Nama kelompok',
-                        prefixIcon: Icon(Icons.label_outline_rounded),
+                        prefixIcon: AppIcon(Icons.label_outline_rounded),
                       ),
                       validator: requiredText,
                     ),
@@ -436,7 +437,7 @@ class _BudidayaFormPageState extends State<BudidayaFormPage> {
                       borderRadius: BorderRadius.circular(18),
                       decoration: const InputDecoration(
                         labelText: 'Kandang',
-                        prefixIcon: Icon(Icons.warehouse_outlined),
+                        prefixIcon: AppIcon(Icons.warehouse_outlined),
                       ),
                       items: s.kandang
                           .map(
@@ -462,7 +463,7 @@ class _BudidayaFormPageState extends State<BudidayaFormPage> {
                       ),
                       decoration: const InputDecoration(
                         labelText: 'Berat awal (kg, opsional)',
-                        prefixIcon: Icon(Icons.scale_rounded),
+                        prefixIcon: AppIcon(Icons.scale_rounded),
                       ),
                       validator: (v) =>
                           v != null && v.isNotEmpty && positive(v) != null
@@ -480,7 +481,7 @@ class _BudidayaFormPageState extends State<BudidayaFormPage> {
                           labelText: 'Telur ditebar dari stok (gram, opsional)',
                           helperText:
                               'Stok telur: ${qty('Telur', s.stok('Telur'))}',
-                          prefixIcon: const Icon(Icons.egg_outlined),
+                          prefixIcon: const AppIcon(Icons.egg_outlined),
                         ),
                         validator: (v) {
                           if (v == null || v.isEmpty) return null;
@@ -507,7 +508,7 @@ class _BudidayaFormPageState extends State<BudidayaFormPage> {
                         alignment: Alignment.centerLeft,
                         child: TextButton.icon(
                           onPressed: () => setState(() => perkiraan = null),
-                          icon: const Icon(
+                          icon: const AppIcon(
                             Icons.auto_awesome_rounded,
                             size: 16,
                           ),
@@ -521,7 +522,7 @@ class _BudidayaFormPageState extends State<BudidayaFormPage> {
                       maxLines: 3,
                       decoration: const InputDecoration(
                         labelText: 'Catatan (opsional)',
-                        prefixIcon: Icon(Icons.notes_rounded),
+                        prefixIcon: AppIcon(Icons.notes_rounded),
                       ),
                     ),
                     gap(22),
@@ -693,7 +694,7 @@ class _FaseTimeline extends StatelessWidget {
                                 ? emeraldLight
                                 : const Color(0x141C1C1E),
                           ),
-                          child: Icon(
+                          child: AppIcon(
                             i < now ? Icons.check_rounded : Icons.circle,
                             size: i < now ? 14 : 7,
                             color: i <= now ? Colors.white : muted,
@@ -793,7 +794,11 @@ class BudidayaDetailPage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Pill(
-                              item.selesai ? 'Selesai' : 'Sedang berjalan',
+                              item.selesai
+                                  ? (item.tanggalSelesai == null
+                                        ? 'Selesai'
+                                        : 'Selesai ${tanggalPanjang(item.tanggalSelesai!)}')
+                                  : 'Sedang berjalan',
                               color: Colors.white.withValues(alpha: 0.12),
                               textColor: mint,
                               icon: item.selesai
@@ -813,7 +818,7 @@ class BudidayaDetailPage extends StatelessWidget {
                             gap(4),
                             Row(
                               children: [
-                                const Icon(
+                                const AppIcon(
                                   Icons.location_on_rounded,
                                   size: 14,
                                   color: Colors.white60,
@@ -914,6 +919,13 @@ class BudidayaDetailPage extends StatelessWidget {
               ],
             ),
           ),
+          SectionTitle(
+            'Rapor siklus',
+            action: 'Biaya',
+            onAction: () =>
+                openPage(context, BiayaFormPage(initialBudidayaId: item.id)),
+          ),
+          FadeSlideIn(delay: 2, child: RaporCard(item: item)),
           if (item.tujuan == 'perkawinan') ...[
             const SectionTitle('Fase perkawinan'),
             FadeSlideIn(delay: 2, child: _FaseTimeline(item: item)),
@@ -986,7 +998,7 @@ class BudidayaDetailPage extends StatelessWidget {
                   await kirim(context, () => s.finish(item));
                 }
               },
-              icon: const Icon(Icons.flag_rounded),
+              icon: const AppIcon(Icons.flag_rounded),
               label: const Text('Selesaikan Budidaya'),
             ),
           ],

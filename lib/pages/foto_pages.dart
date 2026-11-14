@@ -121,7 +121,7 @@ Widget fotoImage(String path, {BoxFit fit = BoxFit.cover, int? cacheWidth}) {
   Widget rusak(BuildContext _, Object _, StackTrace? _) => Container(
     color: const Color(0xFFE9E6E2),
     alignment: Alignment.center,
-    child: const Icon(Icons.broken_image_rounded, color: muted),
+    child: const AppIcon(Icons.broken_image_rounded, color: muted),
   );
   if (path.startsWith('http')) {
     return Image.network(

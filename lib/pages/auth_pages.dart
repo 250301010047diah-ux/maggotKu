@@ -91,14 +91,14 @@ class _LoginPageState extends State<LoginPage> {
                       children: [
                         Row(
                           children: [
-                            const Icon(
-                              Icons.eco_rounded,
-                              color: champagne,
-                              size: 22,
+                            Image.asset(
+                              'assets/images/image/logo.png',
+                              width: 32,
+                              height: 32,
                             ),
                             const SizedBox(width: 6),
                             const Text(
-                              'MaggotKu',
+                              'MaggotTrack',
                               style: TextStyle(
                                 fontFamily: headFont,
                                 fontWeight: FontWeight.w700,
@@ -166,7 +166,7 @@ class _LoginPageState extends State<LoginPage> {
                           keyboardType: TextInputType.emailAddress,
                           decoration: const InputDecoration(
                             labelText: 'Email',
-                            prefixIcon: Icon(Icons.alternate_email_rounded),
+                            prefixIcon: AppIcon(Icons.alternate_email_rounded),
                           ),
                           validator: emailText,
                         ),
@@ -176,10 +176,12 @@ class _LoginPageState extends State<LoginPage> {
                           obscureText: !show,
                           decoration: InputDecoration(
                             labelText: 'Password',
-                            prefixIcon: const Icon(Icons.lock_outline_rounded),
+                            prefixIcon: const AppIcon(
+                              Icons.lock_outline_rounded,
+                            ),
                             suffixIcon: IconButton(
                               onPressed: () => setState(() => show = !show),
-                              icon: Icon(
+                              icon: AppIcon(
                                 show
                                     ? Icons.visibility_off_rounded
                                     : Icons.visibility_rounded,
@@ -359,7 +361,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) => _AuthShell(
-    title: 'Buat akun\nMaggotKu',
+    title: 'Buat akun\nMaggotTrack',
     subtitle: 'Mulai perjalanan budidayamu bersama Maggi.',
     children: [
       Form(
@@ -371,7 +373,7 @@ class _RegisterPageState extends State<RegisterPage> {
               controller: nama,
               decoration: const InputDecoration(
                 labelText: 'Nama',
-                prefixIcon: Icon(Icons.person_outline_rounded),
+                prefixIcon: AppIcon(Icons.person_outline_rounded),
               ),
               validator: requiredText,
             ),
@@ -381,7 +383,7 @@ class _RegisterPageState extends State<RegisterPage> {
               decoration: const InputDecoration(
                 labelText: 'Nama peternakan',
                 hintText: 'mis. Maggot Jaya Farm',
-                prefixIcon: Icon(Icons.agriculture_outlined),
+                prefixIcon: AppIcon(Icons.agriculture_outlined),
               ),
               validator: requiredText,
             ),
@@ -391,7 +393,7 @@ class _RegisterPageState extends State<RegisterPage> {
               keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
                 labelText: 'Email',
-                prefixIcon: Icon(Icons.alternate_email_rounded),
+                prefixIcon: AppIcon(Icons.alternate_email_rounded),
               ),
               validator: emailText,
             ),
@@ -401,7 +403,7 @@ class _RegisterPageState extends State<RegisterPage> {
               obscureText: true,
               decoration: const InputDecoration(
                 labelText: 'Password',
-                prefixIcon: Icon(Icons.lock_outline_rounded),
+                prefixIcon: AppIcon(Icons.lock_outline_rounded),
               ),
               validator: (v) =>
                   (v?.length ?? 0) < 6 ? 'Minimal 6 karakter' : null,
@@ -412,7 +414,7 @@ class _RegisterPageState extends State<RegisterPage> {
               obscureText: true,
               decoration: const InputDecoration(
                 labelText: 'Konfirmasi password',
-                prefixIcon: Icon(Icons.verified_user_outlined),
+                prefixIcon: AppIcon(Icons.verified_user_outlined),
               ),
               validator: (v) => v != pass.text ? 'Password tidak sama' : null,
             ),
@@ -470,7 +472,7 @@ class _ForgotPageState extends State<ForgotPage> {
           keyboardType: TextInputType.emailAddress,
           decoration: const InputDecoration(
             labelText: 'Email',
-            prefixIcon: Icon(Icons.alternate_email_rounded),
+            prefixIcon: AppIcon(Icons.alternate_email_rounded),
           ),
           validator: emailText,
         ),
@@ -481,7 +483,7 @@ class _ForgotPageState extends State<ForgotPage> {
           if (form.currentState!.validate()) {
             toast(
               context,
-              'Reset lewat email belum tersedia. Hubungi admin MaggotKu '
+              'Reset lewat email belum tersedia. Hubungi admin MaggotTrack '
               'untuk mengatur ulang password akun ${email.text.trim()}.',
             );
           }
@@ -533,7 +535,7 @@ class _ResetPageState extends State<ResetPage> {
                   obscureText: true,
                   decoration: const InputDecoration(
                     labelText: 'Password lama',
-                    prefixIcon: Icon(Icons.lock_clock_outlined),
+                    prefixIcon: AppIcon(Icons.lock_clock_outlined),
                   ),
                   validator: requiredText,
                 ),
@@ -544,7 +546,7 @@ class _ResetPageState extends State<ResetPage> {
                 obscureText: true,
                 decoration: const InputDecoration(
                   labelText: 'Password baru',
-                  prefixIcon: Icon(Icons.lock_outline_rounded),
+                  prefixIcon: AppIcon(Icons.lock_outline_rounded),
                 ),
                 validator: (v) =>
                     (v?.length ?? 0) < 6 ? 'Minimal 6 karakter' : null,
@@ -555,7 +557,7 @@ class _ResetPageState extends State<ResetPage> {
                 obscureText: true,
                 decoration: const InputDecoration(
                   labelText: 'Konfirmasi password',
-                  prefixIcon: Icon(Icons.verified_user_outlined),
+                  prefixIcon: AppIcon(Icons.verified_user_outlined),
                 ),
                 validator: (v) => v != pass.text ? 'Password tidak sama' : null,
               ),

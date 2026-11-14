@@ -1,47 +1,52 @@
 import 'package:flutter/material.dart';
 
-// ============ Palet "Soft Minimal • Maggot Cream & Ember" ============
-// Netral lembut + arang untuk elemen utama + oranye hangat sebagai aksen,
-// krem maggot sebagai sentuhan khas.
-const ink = Color(0xFF1C1C1E); // teks utama
-const muted = Color(0xFF8A8A8F); // teks sekunder
-const emerald = Color(0xFF232325); // arang: tombol, navigasi, teks aktif
-const emeraldLight = Color(0xFFEE6A2C); // aksen oranye ember
-const forest = Color(0xFF2E9E6B); // hijau sukses
+// ============ Palet "Ink & Ember" ============
+// Tegas & minimalis: tinta hitam pekat, kertas hangat, satu aksen ember
+// yang menyala. Krem maggot sebagai sentuhan khas.
+const ink = Color(0xFF0F0F11); // teks utama
+const muted = Color(0xFF76757B); // teks sekunder
+const emerald = Color(0xFF111113); // tinta: tombol, navigasi, teks aktif
+const emeraldLight = Color(0xFFFF5A1F); // aksen ember
+const forest = Color(0xFF13A065); // hijau sukses
 const mint = Color(0xFFFFFFFF); // teks positif di atas kartu hero
-const champagne = Color(0xFFFFE7D1); // krem maggot
-const coral = Color(0xFF3A3A3D); // aksen kedua (arang lembut)
-const lavender = Color(0xFFF1EFF8);
-const butter = Color(0xFFFFF5E4);
+const champagne = Color(0xFFFFE3C7); // krem maggot
+const coral = Color(0xFF2B2B30); // aksen kedua (tinta lembut)
+const lavender = Color(0xFFEFEDFB);
+const butter = Color(0xFFFFF2D6);
+const danger = Color(0xFFE5383B);
+const lime = Color(0xFFD8F25C); // sorotan kecil (badge "baru", dsb.)
 
-// Latar ikon: netral hangat yang sangat lembut
-const sage = Color(0xFFF1F4F1);
-const gold = Color(0xFFFFD166);
-const peach = Color(0xFFFFEFE5);
-const pink = Color(0xFFFBEFF1);
-const sky = Color(0xFFF0F2F6);
-const cream = Color(0xFFF5F4F2);
-const sky2 = Color(0xFFB9B9BE);
-const pink2 = Color(0xFFDCD6D0);
+/// Garis tipis kartu.
+const hairline = Color(0x14000000);
 
-/// Gradasi hero hangat (oranye ember).
+// Latar ikon: tint lembut
+const sage = Color(0xFFE9F5EE);
+const gold = Color(0xFFFFC53D);
+const peach = Color(0xFFFFE9DE);
+const pink = Color(0xFFFCE8EC);
+const sky = Color(0xFFE8EEF8);
+const cream = Color(0xFFF4F2EE);
+const sky2 = Color(0xFFB7B8C0);
+const pink2 = Color(0xFFDAD3CB);
+
+/// Gradasi hero ember.
 const warmGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: [Color(0xFFFFA978), Color(0xFFF26B2A), Color(0xFFD8431F)],
+  colors: [Color(0xFFFF8A3D), Color(0xFFFF5A1F), Color(0xFFE23D12)],
   stops: [0, 0.5, 1],
 );
 
-/// Gradasi arang untuk kartu gelap & tombol utama.
+/// Gradasi tinta untuk kartu gelap & tombol utama.
 const inkGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: [Color(0xFF3B3B3E), Color(0xFF242426), Color(0xFF161617)],
+  colors: [Color(0xFF2A2A2F), Color(0xFF151518), Color(0xFF0A0A0B)],
   stops: [0, 0.55, 1],
 );
 
-// Font: Nunito untuk judul & angka, DM Sans untuk teks biasa.
-const headFont = 'Nunito';
+// Font: DM Sans untuk semua — geometris & tegas.
+const headFont = 'DMSans';
 const bodyFont = 'DMSans';
 
 TextTheme _textTheme() {
@@ -49,8 +54,11 @@ TextTheme _textTheme() {
     useMaterial3: true,
     fontFamily: bodyFont,
   ).textTheme.apply(bodyColor: ink, displayColor: ink);
-  TextStyle? h(TextStyle? s) =>
-      s?.copyWith(fontFamily: headFont, fontWeight: FontWeight.w700);
+  TextStyle? h(TextStyle? s) => s?.copyWith(
+    fontFamily: headFont,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -0.4,
+  );
   return t.copyWith(
     displayLarge: h(t.displayLarge),
     displayMedium: h(t.displayMedium),
@@ -79,7 +87,7 @@ class SmoothPageTransitionsBuilder extends PageTransitionsBuilder {
   ) {
     final inA = CurvedAnimation(
       parent: animation,
-      curve: Curves.easeOutCubic,
+      curve: Curves.easeOutQuart,
       reverseCurve: Curves.easeInCubic,
     );
     final outA = CurvedAnimation(
@@ -88,20 +96,17 @@ class SmoothPageTransitionsBuilder extends PageTransitionsBuilder {
       reverseCurve: Curves.easeInCubic,
     );
     return FadeTransition(
-      opacity: ReverseAnimation(outA),
+      opacity: Tween<double>(begin: 1, end: 0.4).animate(outA),
       child: ScaleTransition(
-        scale: Tween<double>(begin: 1, end: 0.95).animate(outA),
+        scale: Tween<double>(begin: 1, end: 0.94).animate(outA),
         child: FadeTransition(
           opacity: inA,
           child: SlideTransition(
             position: Tween<Offset>(
-              begin: const Offset(0, 0.06),
+              begin: const Offset(0, 0.08),
               end: Offset.zero,
             ).animate(inA),
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 0.98, end: 1).animate(inA),
-              child: child,
-            ),
+            child: child,
           ),
         ),
       ),
@@ -110,7 +115,7 @@ class SmoothPageTransitionsBuilder extends PageTransitionsBuilder {
 }
 
 OutlineInputBorder _border(Color c, [double w = 1]) => OutlineInputBorder(
-  borderRadius: BorderRadius.circular(18),
+  borderRadius: BorderRadius.circular(16),
   borderSide: BorderSide(color: c, width: w),
 );
 
@@ -120,10 +125,11 @@ final appTheme = ThemeData(
   textTheme: _textTheme(),
   scaffoldBackgroundColor: Colors.transparent,
   colorScheme: ColorScheme.fromSeed(
-    seedColor: forest,
+    seedColor: emeraldLight,
     primary: emerald,
-    secondary: champagne,
+    secondary: emeraldLight,
     surface: Colors.white,
+    error: danger,
   ),
   pageTransitionsTheme: PageTransitionsTheme(
     builders: {
@@ -141,45 +147,47 @@ final appTheme = ThemeData(
     titleTextStyle: TextStyle(
       fontFamily: headFont,
       color: ink,
-      fontSize: 18,
+      fontSize: 17,
       fontWeight: FontWeight.w700,
+      letterSpacing: -0.2,
     ),
   ),
   cardTheme: CardThemeData(
     color: Colors.white,
     elevation: 0,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
   ),
   inputDecorationTheme: InputDecorationTheme(
     filled: true,
-    fillColor: Colors.white,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+    fillColor: const Color(0xFFF7F6F3),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
     labelStyle: const TextStyle(color: muted, fontSize: 14),
     hintStyle: const TextStyle(color: muted, fontSize: 14),
     floatingLabelStyle: const TextStyle(
-      color: emerald,
-      fontWeight: FontWeight.w600,
+      color: ink,
+      fontWeight: FontWeight.w700,
     ),
-    prefixIconColor: muted,
+    prefixIconColor: ink,
     suffixIconColor: muted,
-    border: _border(const Color(0x0D000000)),
-    enabledBorder: _border(const Color(0x0D000000)),
-    focusedBorder: _border(emeraldLight, 1.6),
-    errorBorder: _border(const Color(0xFFD9534F)),
-    focusedErrorBorder: _border(const Color(0xFFD9534F), 1.6),
+    border: _border(hairline),
+    enabledBorder: _border(hairline),
+    focusedBorder: _border(ink, 1.8),
+    errorBorder: _border(danger),
+    focusedErrorBorder: _border(danger, 1.8),
   ),
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
       backgroundColor: emerald,
       foregroundColor: Colors.white,
       elevation: 0,
-      minimumSize: const Size.fromHeight(56),
+      minimumSize: const Size.fromHeight(58),
       textStyle: const TextStyle(
         fontFamily: headFont,
         fontWeight: FontWeight.w700,
         fontSize: 16,
+        letterSpacing: -0.1,
       ),
-      shape: const StadiumBorder(),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
     ),
   ),
   filledButtonTheme: FilledButtonThemeData(
@@ -192,21 +200,21 @@ final appTheme = ThemeData(
         fontWeight: FontWeight.w700,
         fontSize: 15,
       ),
-      shape: const StadiumBorder(),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
   ),
   outlinedButtonTheme: OutlinedButtonThemeData(
     style: OutlinedButton.styleFrom(
-      foregroundColor: emerald,
+      foregroundColor: ink,
       backgroundColor: Colors.white,
-      minimumSize: const Size.fromHeight(56),
-      side: const BorderSide(color: Color(0x0F000000)),
+      minimumSize: const Size.fromHeight(58),
+      side: const BorderSide(color: ink, width: 1.4),
       textStyle: const TextStyle(
         fontFamily: headFont,
         fontWeight: FontWeight.w700,
         fontSize: 15,
       ),
-      shape: const StadiumBorder(),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
     ),
   ),
   textButtonTheme: TextButtonThemeData(
@@ -219,12 +227,20 @@ final appTheme = ThemeData(
       ),
     ),
   ),
+  switchTheme: SwitchThemeData(
+    thumbColor: const WidgetStatePropertyAll(Colors.white),
+    trackColor: WidgetStateProperty.resolveWith(
+      (s) => s.contains(WidgetState.selected) ? ink : const Color(0xFFD9D7D2),
+    ),
+    trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+  ),
   snackBarTheme: SnackBarThemeData(
     behavior: SnackBarBehavior.floating,
     backgroundColor: emerald,
     contentTextStyle: const TextStyle(
       color: Colors.white,
       fontFamily: bodyFont,
+      fontWeight: FontWeight.w600,
       fontSize: 14,
     ),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -237,7 +253,16 @@ final appTheme = ThemeData(
       fontFamily: headFont,
       fontWeight: FontWeight.w700,
       fontSize: 20,
+      letterSpacing: -0.3,
       color: ink,
+    ),
+  ),
+  bottomSheetTheme: const BottomSheetThemeData(
+    backgroundColor: Colors.white,
+    surfaceTintColor: Colors.transparent,
+    showDragHandle: true,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
   ),
   datePickerTheme: DatePickerThemeData(
@@ -247,6 +272,6 @@ final appTheme = ThemeData(
     headerForegroundColor: Colors.white,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
   ),
-  dividerTheme: const DividerThemeData(color: Color(0x121C1C1E), space: 1),
+  dividerTheme: const DividerThemeData(color: hairline, space: 1),
   progressIndicatorTheme: const ProgressIndicatorThemeData(color: emeraldLight),
 );

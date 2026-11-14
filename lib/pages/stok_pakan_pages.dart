@@ -548,7 +548,7 @@ class _PakanMasukPageState extends State<PakanMasukPage> {
                       decoration: InputDecoration(
                         labelText: 'Jumlah (kg)',
                         helperText: 'Stok sekarang: ${kg(stok)}',
-                        prefixIcon: const Icon(Icons.scale_rounded),
+                        prefixIcon: const AppIcon(Icons.scale_rounded),
                       ),
                       validator: (v) {
                         final e = positive(v);
@@ -569,7 +569,7 @@ class _PakanMasukPageState extends State<PakanMasukPage> {
                         decoration: const InputDecoration(
                           labelText: 'Harga per kg (opsional)',
                           helperText: 'Kosongkan kalau pakan didapat gratis',
-                          prefixIcon: Icon(Icons.payments_outlined),
+                          prefixIcon: AppIcon(Icons.payments_outlined),
                         ),
                         validator: (v) =>
                             v != null && v.isNotEmpty && positive(v) != null

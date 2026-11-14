@@ -188,7 +188,7 @@ class _CatatanPageState extends State<CatatanPage> {
               borderRadius: BorderRadius.circular(18),
               decoration: const InputDecoration(
                 labelText: 'Filter kelompok',
-                prefixIcon: Icon(Icons.filter_list_rounded),
+                prefixIcon: AppIcon(Icons.filter_list_rounded),
               ),
               items: [
                 const DropdownMenuItem<int?>(
@@ -214,7 +214,7 @@ class _CatatanPageState extends State<CatatanPage> {
               gap(12),
               OutlinedButton.icon(
                 onPressed: _resetFilter,
-                icon: const Icon(Icons.filter_alt_off_rounded),
+                icon: const AppIcon(Icons.filter_alt_off_rounded),
                 label: const Text('Reset filter'),
               ),
             ],
@@ -312,7 +312,7 @@ class _CatatanCard extends StatelessWidget {
                   context,
                   CatatanFormPage(isPakan: isPakan, item: e),
                 ),
-                icon: const Icon(Icons.edit_rounded, size: 18),
+                icon: const AppIcon(Icons.edit_rounded, size: 18),
                 label: const Text('Edit'),
               ),
               TextButton.icon(
@@ -332,7 +332,7 @@ class _CatatanCard extends StatelessWidget {
                     await kirim(context, () => s.deleteCatatan(isPakan, e));
                   }
                 },
-                icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                icon: const AppIcon(Icons.delete_outline_rounded, size: 18),
                 label: const Text('Hapus'),
               ),
             ],
@@ -384,6 +384,10 @@ class _CatatanFormPageState extends State<CatatanFormPage> {
 
   late final berat = TextEditingController(text: widget.item?.berat.toString());
   late final catatan = TextEditingController(text: widget.item?.catatan);
+
+  /// Harga pakan per kg (dibekukan saat dicatat). Diisi sekali di build.
+  final harga = TextEditingController();
+  bool _hargaSiap = false;
   late int? budidayaId = widget.item?.budidayaId ?? widget.initialBudidayaId;
   late DateTime date = widget.item?.tanggal ?? DateTime.now();
 
@@ -419,12 +423,20 @@ class _CatatanFormPageState extends State<CatatanFormPage> {
     jenis.dispose();
     berat.dispose();
     catatan.dispose();
+    harga.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final s = AppScope.of(context);
+    if (!_hargaSiap) {
+      _hargaSiap = true;
+      final h = widget.item != null
+          ? widget.item!.hargaPerKg
+          : s.hargaPakanRata();
+      if (h != null) harga.text = h.round().toString();
+    }
     final title = widget.isPakan ? 'Pakan' : 'Panen';
     final verb = widget.item == null
         ? (widget.isPakan ? 'Tambah' : 'Catat')
@@ -473,7 +485,7 @@ class _CatatanFormPageState extends State<CatatanFormPage> {
                       borderRadius: BorderRadius.circular(18),
                       decoration: const InputDecoration(
                         labelText: 'Kelompok budidaya',
-                        prefixIcon: Icon(Icons.spa_outlined),
+                        prefixIcon: AppIcon(Icons.spa_outlined),
                       ),
                       items: s.budidaya
                           .map(
@@ -550,7 +562,7 @@ class _CatatanFormPageState extends State<CatatanFormPage> {
                         labelText: widget.isPakan
                             ? 'Berat (kg)'
                             : 'Jumlah (${satuan(produk)})',
-                        prefixIcon: const Icon(Icons.scale_rounded),
+                        prefixIcon: const AppIcon(Icons.scale_rounded),
                       ),
                       onChanged: (_) => setState(() {}),
                       validator: (v) =>
@@ -570,13 +582,41 @@ class _CatatanFormPageState extends State<CatatanFormPage> {
                         ),
                       ),
                     ],
+                    if (widget.isPakan) ...[
+                      gap(14),
+                      TextFormField(
+                        controller: harga,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          labelText: 'Harga pakan /kg (opsional)',
+                          helperText: () {
+                            final b = number(berat.text) ?? 0;
+                            final h = number(harga.text) ?? 0;
+                            return b > 0 && h > 0
+                                ? 'Biaya pakan ini ${rupiah(b * h)} • harga dikunci saat disimpan'
+                                : 'Bawaan: rata-rata harga beli 90 hari terakhir';
+                          }(),
+                          prefixIcon: const AppIcon(Icons.payments_outlined),
+                        ),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return null;
+                          final n = number(v);
+                          return n == null || n < 0
+                              ? 'Harga tidak boleh minus'
+                              : null;
+                        },
+                      ),
+                    ],
                     gap(14),
                     TextFormField(
                       controller: catatan,
                       maxLines: 3,
                       decoration: const InputDecoration(
                         labelText: 'Catatan (opsional)',
-                        prefixIcon: Icon(Icons.notes_rounded),
+                        prefixIcon: AppIcon(Icons.notes_rounded),
                       ),
                     ),
                     gap(22),
@@ -597,6 +637,9 @@ class _CatatanFormPageState extends State<CatatanFormPage> {
                             number(berat.text)!,
                             catatan.text.trim(),
                             widget.isPakan ? jenisPakan! : produk,
+                            hargaPerKg: widget.isPakan
+                                ? number(harga.text)
+                                : null,
                           ),
                         );
                         if (ok && context.mounted) Navigator.pop(context, true);

@@ -133,10 +133,14 @@ class _OnboardingPageState extends State<OnboardingPage>
                 padding: const EdgeInsets.fromLTRB(24, 8, 12, 0),
                 child: Row(
                   children: [
-                    const Icon(Icons.eco_rounded, color: emerald, size: 22),
+                    Image.asset(
+                      'assets/images/image/logo.png',
+                      width: 32,
+                      height: 32,
+                    ),
                     const SizedBox(width: 6),
                     const Text(
-                      'MaggotKu',
+                      'MaggotTrack',
                       style: TextStyle(
                         fontFamily: headFont,
                         fontWeight: FontWeight.w700,
@@ -201,7 +205,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                           children: [
                             Text(last ? 'Mulai Sekarang' : 'Lanjut'),
                             const SizedBox(width: 8),
-                            Icon(
+                            AppIcon(
                               last
                                   ? Icons.rocket_launch_rounded
                                   : Icons.arrow_forward_rounded,

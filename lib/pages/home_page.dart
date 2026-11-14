@@ -12,6 +12,8 @@ import 'catatan_pages.dart';
 import 'kalkulator_page.dart';
 import 'kandang_pages.dart';
 import 'onboarding_page.dart';
+import 'biaya_pages.dart';
+import 'pembeli_pages.dart';
 import 'penjualan_pages.dart';
 
 /// Tab yang sedang aktif; bisa diubah dari halaman mana pun.
@@ -130,72 +132,122 @@ class ElegantNavBar extends StatelessWidget {
   Widget build(BuildContext context) => SafeArea(
     minimum: const EdgeInsets.fromLTRB(16, 0, 16, 14),
     child: Container(
-      height: 70,
+      height: 72,
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF3B3B3E), Color(0xFF1C1C1E)],
-        ),
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
+        gradient: inkGradient,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: const Color(0x24FFFFFF)),
+        boxShadow: const [
           BoxShadow(
-            color: const Color(0x40000000),
+            color: Color(0x55000000),
             blurRadius: 30,
-            offset: const Offset(0, 12),
+            offset: Offset(0, 14),
           ),
         ],
       ),
       child: LayoutBuilder(
         builder: (_, box) {
-          final sel = box.maxWidth * 0.34;
+          final sel = box.maxWidth * 0.36;
           final other = (box.maxWidth - sel) / (_items.length - 1);
-          return Row(
+          return Stack(
             children: [
-              for (final (i, it) in _items.indexed)
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => onTap(i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 380),
-                    curve: Curves.easeOutCubic,
-                    width: i == index ? sel : other,
-                    height: 54,
-                    decoration: BoxDecoration(
-                      color: i == index ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: ClipRect(
-                      child: OverflowBox(
-                        minWidth: 0,
-                        maxWidth: double.infinity,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              it.$1,
-                              size: 22,
-                              color: i == index
-                                  ? emerald
-                                  : Colors.white.withValues(alpha: 0.6),
-                            ),
-                            if (i == index) ...[
-                              const SizedBox(width: 6),
-                              Text(
-                                it.$2,
-                                style: const TextStyle(
-                                  fontFamily: headFont,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 13,
-                                  color: emerald,
+              // indikator putih yang meluncur & memantul
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 520),
+                curve: Curves.easeOutBack,
+                left: index * other,
+                top: 0,
+                bottom: 0,
+                width: sel,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(19),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x66FF5A1F),
+                        blurRadius: 18,
+                        spreadRadius: -6,
+                        offset: Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  for (final (i, it) in _items.indexed)
+                    GestureDetector(
+                      key: ValueKey('nav-$i'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => onTap(i),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 520),
+                        curve: Curves.easeOutBack,
+                        width: i == index ? sel : other,
+                        height: 56,
+                        child: ClipRect(
+                          child: OverflowBox(
+                            minWidth: 0,
+                            maxWidth: double.infinity,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                AnimatedScale(
+                                  scale: i == index ? 1.12 : 1,
+                                  duration: const Duration(milliseconds: 520),
+                                  curve: Curves.elasticOut,
+                                  child: AppIcon(
+                                    it.$1,
+                                    size: 22,
+                                    color: i == index
+                                        ? emerald
+                                        : Colors.white.withValues(alpha: 0.62),
+                                    accent: i == index
+                                        ? emeraldLight.withValues(alpha: 0.55)
+                                        : null,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ],
+                                if (i == index) ...[
+                                  const SizedBox(width: 7),
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        it.$2,
+                                        style: const TextStyle(
+                                          fontFamily: headFont,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                          letterSpacing: -0.2,
+                                          color: emerald,
+                                        ),
+                                      ),
+                                      Container(
+                                        width: 14,
+                                        height: 3,
+                                        margin: const EdgeInsets.only(top: 2),
+                                        decoration: BoxDecoration(
+                                          color: emeraldLight,
+                                          borderRadius: BorderRadius.circular(
+                                            2,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
+                ],
+              ),
             ],
           );
         },
@@ -270,7 +322,8 @@ class _DashboardPageState extends State<DashboardPage> {
     final delta = pendapatanLalu == 0
         ? null
         : (pendapatan - pendapatanLalu) / pendapatanLalu * 100;
-    final piutang = s.pendapatan(jualBulan.where((e) => !e.lunas));
+    // Semua piutang yang masih berjalan (tidak hanya bulan ini).
+    final piutang = s.pendapatan(s.penjualan.where((e) => !e.lunas));
     final kgTerjual = jualBulan
         .where((e) => satuan(e.produk) == 'kg')
         .fold<double>(0, (a, e) => a + e.berat);
@@ -547,7 +600,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       color: emeraldLight,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: const AppIcon(
                       Icons.calculate_rounded,
                       color: Colors.white,
                     ),
@@ -732,10 +785,10 @@ class _DashboardPageState extends State<DashboardPage> {
                   () => openPage(context, const PenjualanFormPage()),
                 ),
                 _quick(
-                  Icons.warehouse_rounded,
-                  'Kandang',
+                  Icons.groups_rounded,
+                  'Pembeli',
                   sky,
-                  () => openPage(context, const KandangListPage()),
+                  () => openPage(context, const PembeliPage()),
                 ),
               ],
             ),
@@ -805,21 +858,44 @@ class _DashboardPageState extends State<DashboardPage> {
           child: Column(
             children: [
               Container(
-                width: 62,
-                height: 62,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
-                  color: color,
+                  gradient: inkGradient,
                   borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: Colors.white, width: 2),
+                  border: Border.all(color: const Color(0x22FFFFFF)),
                   boxShadow: const [
                     BoxShadow(
-                      color: Color(0x141C1C1E),
+                      color: Color(0x330F0F11),
                       blurRadius: 18,
-                      offset: Offset(0, 8),
+                      offset: Offset(0, 10),
                     ),
                   ],
                 ),
-                child: Icon(icon, color: emerald, size: 26),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      right: 9,
+                      top: 9,
+                      child: Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                    Center(
+                      child: AppIcon(
+                        icon,
+                        color: Colors.white,
+                        accent: emeraldLight.withValues(alpha: 0.7),
+                        size: 28,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -941,6 +1017,32 @@ class AccountPage extends StatelessWidget {
               ],
             ),
           ),
+          const SectionTitle('Bisnis'),
+          FadeSlideIn(
+            delay: 2,
+            child: GlassCard(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Column(
+                children: [
+                  _menu(
+                    Icons.groups_rounded,
+                    sky,
+                    'Pembeli & piutang',
+                    '${s.pembeli.length} pembeli • tagih via WhatsApp',
+                    () => openPage(context, const PembeliPage()),
+                  ),
+                  const Divider(indent: 56),
+                  _menu(
+                    Icons.account_balance_wallet_rounded,
+                    champagne,
+                    'Biaya & laba bersih',
+                    'Bibit, listrik, tenaga, dll.',
+                    () => openPage(context, const BiayaPage()),
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SectionTitle('Pengaturan'),
           FadeSlideIn(
             delay: 2,
@@ -960,7 +1062,7 @@ class AccountPage extends StatelessWidget {
                     Icons.lock_rounded,
                     peach,
                     'Ubah password',
-                    'Simulasi keamanan akun',
+                    'Ganti password akunmu',
                     () => openPage(context, const ResetPage()),
                   ),
                   const Divider(indent: 56),
@@ -1007,13 +1109,13 @@ class AccountPage extends StatelessWidget {
                   );
                 }
               },
-              icon: const Icon(Icons.logout_rounded),
+              icon: const AppIcon(Icons.logout_rounded),
               label: const Text('Keluar'),
             ),
           ),
           gap(14),
           const Text(
-            'Data akunmu tersimpan aman di server MaggotKu dan tetap ada walau ganti HP.',
+            'Data akunmu tersimpan aman di server MaggotTrack dan tetap ada walau ganti HP.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: muted),
           ),
@@ -1080,7 +1182,7 @@ class AccountPage extends StatelessWidget {
                 controller: n,
                 decoration: const InputDecoration(
                   labelText: 'Nama',
-                  prefixIcon: Icon(Icons.person_outline_rounded),
+                  prefixIcon: AppIcon(Icons.person_outline_rounded),
                 ),
                 validator: requiredText,
               ),
@@ -1089,7 +1191,7 @@ class AccountPage extends StatelessWidget {
                 controller: f,
                 decoration: const InputDecoration(
                   labelText: 'Nama peternakan',
-                  prefixIcon: Icon(Icons.agriculture_outlined),
+                  prefixIcon: AppIcon(Icons.agriculture_outlined),
                 ),
               ),
               gap(),
@@ -1097,7 +1199,7 @@ class AccountPage extends StatelessWidget {
                 controller: e,
                 decoration: const InputDecoration(
                   labelText: 'Email',
-                  prefixIcon: Icon(Icons.alternate_email_rounded),
+                  prefixIcon: AppIcon(Icons.alternate_email_rounded),
                 ),
                 validator: emailText,
               ),

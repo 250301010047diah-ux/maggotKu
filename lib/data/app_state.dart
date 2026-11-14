@@ -15,6 +15,8 @@ abstract class MaggotRepository {
   List<Foto> get foto;
   List<Mutasi> get mutasi;
   List<MutasiPakan> get mutasiPakan;
+  List<Pembeli> get pembeli;
+  List<Biaya> get biaya;
 }
 
 class LocalRepository implements MaggotRepository {
@@ -147,6 +149,10 @@ class LocalRepository implements MaggotRepository {
   final List<Mutasi> mutasi = [];
   @override
   final List<MutasiPakan> mutasiPakan = [];
+  @override
+  final List<Pembeli> pembeli = [];
+  @override
+  final List<Biaya> biaya = [];
 }
 
 /// Satu tugas di agenda hari ini.
@@ -231,6 +237,8 @@ class AppState extends ChangeNotifier {
       foto,
       mutasi,
       mutasiPakan,
+      pembeli,
+      biaya,
     ]) {
       l.clear();
     }
@@ -320,7 +328,28 @@ class AppState extends ChangeNotifier {
       final pk = rows(3, pakanApi), pn = rows(4, panenApi);
       final pj = rows(5, penjualanApi), m = rows(6, mutasiApi);
       final f = rows(7, fotoApi), mp = rows(8, mutasiPakanApi);
+      // Pembeli & biaya: fitur baru, jangan gagalkan sinkron bila tabelnya
+      // belum ada di server.
+      Future<List<T>> opsional<T>(
+        String path,
+        T Function(Map<String, dynamic>) f,
+      ) async {
+        try {
+          final j = await a.get(path);
+          return [
+            for (final e in (j['data'] as List)) f(e as Map<String, dynamic>),
+          ];
+        } on ApiException catch (e) {
+          if (e.status == 401) rethrow;
+          return [];
+        }
+      }
+
+      final pb = await opsional('/pembeli', pembeliApi);
+      final by = await opsional('/biaya', biayaApi);
       _clearData();
+      pembeli.addAll(pb.reversed);
+      biaya.addAll(by.reversed);
       kandang.addAll(k.reversed);
       budidaya.addAll(b.reversed);
       pakan.addAll(pk.reversed);
@@ -371,6 +400,263 @@ class AppState extends ChangeNotifier {
   List<Foto> get foto => repository.foto;
   List<Mutasi> get mutasi => repository.mutasi;
   List<MutasiPakan> get mutasiPakan => repository.mutasiPakan;
+  List<Pembeli> get pembeli => repository.pembeli;
+  List<Biaya> get biaya => repository.biaya;
+
+  // =================== Pembeli tetap ===================
+  Pembeli? pembeliById(int? id) {
+    if (id == null) return null;
+    for (final e in pembeli) {
+      if (e.id == id) return e;
+    }
+    return null;
+  }
+
+  Future<Pembeli> savePembeli(
+    Pembeli? old, {
+    required String nama,
+    String noHp = '',
+    String alamat = '',
+    String catatan = '',
+  }) async {
+    Pembeli baru;
+    if (online) {
+      final body = {
+        'nama': nama,
+        'no_hp': noHp,
+        'alamat': alamat,
+        'catatan': catatan,
+      };
+      final j = await _remote(
+        (a) => old == null
+            ? a.post('/pembeli', body)
+            : a.put('/pembeli/${old.id}', body),
+      );
+      baru = pembeliApi(_data(j));
+    } else {
+      baru = Pembeli(
+        old?.id ?? _next(pembeli),
+        nama,
+        noHp: noHp,
+        alamat: alamat,
+        catatan: catatan,
+      );
+    }
+    if (old == null) {
+      pembeli.add(baru);
+    } else {
+      old
+        ..nama = baru.nama
+        ..noHp = baru.noHp
+        ..alamat = baru.alamat
+        ..catatan = baru.catatan;
+      // Server ikut memperbarui nama di riwayat penjualan.
+      for (final p in penjualan.where((p) => p.pembeliId == old.id)) {
+        p.pembeli = baru.nama;
+      }
+      baru = old;
+    }
+    notifyListeners();
+    return baru;
+  }
+
+  Future<void> deletePembeli(Pembeli p) async {
+    if (online) await _remote((a) => a.delete('/pembeli/${p.id}'));
+    pembeli.remove(p);
+    for (final j in penjualan.where((j) => j.pembeliId == p.id)) {
+      j.pembeliId = null;
+    }
+    notifyListeners();
+  }
+
+  /// Transaksi milik satu pembeli (pakai id, atau nama untuk data lama).
+  List<Penjualan> penjualanOf(Pembeli p) =>
+      penjualan
+          .where(
+            (j) =>
+                j.pembeliId == p.id ||
+                (j.pembeliId == null &&
+                    j.pembeli.trim().toLowerCase() ==
+                        p.nama.trim().toLowerCase()),
+          )
+          .toList()
+        ..sort((a, b) => b.tanggal.compareTo(a.tanggal));
+
+  /// Piutang dikelompokkan per pembeli, terbesar dulu.
+  List<
+    ({
+      String nama,
+      Pembeli? pembeli,
+      double total,
+      int umur,
+      List<Penjualan> items,
+    })
+  >
+  piutang() {
+    final m = <String, List<Penjualan>>{};
+    for (final j in penjualan.where((j) => !j.lunas)) {
+      final k = j.pembeliId != null
+          ? 'id:${j.pembeliId}'
+          : 'n:${j.pembeli.trim().toLowerCase()}';
+      (m[k] ??= []).add(j);
+    }
+    final out = [
+      for (final items in m.values)
+        (
+          nama: pembeliById(items.first.pembeliId)?.nama ?? items.first.pembeli,
+          pembeli:
+              pembeliById(items.first.pembeliId) ??
+              _pembeliByNama(items.first.pembeli),
+          total: pendapatan(items),
+          umur: items.fold<int>(
+            0,
+            (a, e) => e.umurPiutang > a ? e.umurPiutang : a,
+          ),
+          items: items..sort((a, b) => a.tanggal.compareTo(b.tanggal)),
+        ),
+    ]..sort((a, b) => b.total.compareTo(a.total));
+    return out;
+  }
+
+  Pembeli? _pembeliByNama(String nama) {
+    final n = nama.trim().toLowerCase();
+    for (final p in pembeli) {
+      if (p.nama.trim().toLowerCase() == n) return p;
+    }
+    return null;
+  }
+
+  /// Pesan tagihan WhatsApp yang sopan.
+  String pesanTagih(String nama, List<Penjualan> items) {
+    final b = StringBuffer()
+      ..writeln('Halo $nama 🙏')
+      ..writeln()
+      ..writeln(
+        'Mengingatkan pembayaran maggot${farmName.isEmpty ? '' : ' dari $farmName'}:',
+      );
+    for (final e in items) {
+      b.writeln(
+        '• ${tanggalPendek(e.tanggal)} — ${e.produk} ${qty(e.produk, e.berat)} = ${rupiah(e.total)}',
+      );
+    }
+    b
+      ..writeln()
+      ..writeln('Total: *${rupiah(pendapatan(items))}*')
+      ..writeln()
+      ..write('Terima kasih banyak 🐛');
+    return b.toString();
+  }
+
+  /// Tandai transaksi lunas (tanggal lunas diisi server = sekarang).
+  Future<void> tandaiLunas(Penjualan p, [bool lunas = true]) async {
+    if (online) {
+      final j = await _remote(
+        (a) => a.put('/penjualan/${p.id}', {'lunas': lunas}),
+      );
+      final baru = penjualanApi(_data(j));
+      p
+        ..lunas = baru.lunas
+        ..tanggalLunas = baru.tanggalLunas;
+    } else {
+      p
+        ..lunas = lunas
+        ..tanggalLunas = lunas ? DateTime.now() : null;
+    }
+    notifyListeners();
+  }
+
+  // =================== Biaya lain ===================
+  Future<void> saveBiaya(
+    Biaya? old, {
+    required DateTime tanggal,
+    required String kategori,
+    required double jumlah,
+    int? budidayaId,
+    String keterangan = '',
+  }) async {
+    Biaya baru;
+    if (online) {
+      final body = {
+        'tanggal': apiDate(tanggal),
+        'kategori': kategori,
+        'jumlah': jumlah,
+        'budidaya_id': budidayaId,
+        'keterangan': keterangan,
+      };
+      final j = await _remote(
+        (a) => old == null
+            ? a.post('/biaya', body)
+            : a.put('/biaya/${old.id}', body),
+      );
+      baru = biayaApi(_data(j));
+    } else {
+      baru = Biaya(
+        old?.id ?? _next(biaya),
+        tanggal,
+        kategori,
+        jumlah,
+        budidayaId: budidayaId,
+        keterangan: keterangan,
+      );
+    }
+    if (old == null) {
+      biaya.add(baru);
+    } else {
+      old
+        ..tanggal = baru.tanggal
+        ..kategori = baru.kategori
+        ..jumlah = baru.jumlah
+        ..budidayaId = baru.budidayaId
+        ..keterangan = baru.keterangan;
+    }
+    notifyListeners();
+  }
+
+  Future<void> deleteBiaya(Biaya b) async {
+    if (online) await _remote((a) => a.delete('/biaya/${b.id}'));
+    biaya.remove(b);
+    notifyListeners();
+  }
+
+  /// Total biaya lain (Rp) dalam rentang [dari, sampai).
+  double biayaLain(DateTime dari, DateTime sampai) => biaya
+      .where((b) => !b.tanggal.isBefore(dari) && b.tanggal.isBefore(sampai))
+      .fold(0, (s, b) => s + b.jumlah);
+
+  /// Rapor satu siklus: pakan, biaya, panen, dan perkiraan untung.
+  ({
+    double pakanKg,
+    double biayaPakan,
+    double biayaLain,
+    double panenKg,
+    double telurG,
+    double? fcr,
+    int durasi,
+    bool hargaPakanLengkap,
+  })
+  rapor(Budidaya b) {
+    final pk = pakan.where((p) => p.budidayaId == b.id).toList();
+    final pn = panen.where((p) => p.budidayaId == b.id).toList();
+    final pakanKg = pk.fold<double>(0, (a, e) => a + e.berat);
+    final panenKg = total(pn);
+    final telur = pn
+        .where((e) => e.jenis == 'Telur')
+        .fold<double>(0, (a, e) => a + e.berat);
+    final akhir = b.tanggalSelesai ?? DateTime.now();
+    final d = akhir.difference(b.mulai).inDays;
+    return (
+      pakanKg: pakanKg,
+      biayaPakan: pk.fold(0, (a, e) => a + e.biaya),
+      biayaLain: biaya
+          .where((e) => e.budidayaId == b.id)
+          .fold(0, (a, e) => a + e.jumlah),
+      panenKg: panenKg,
+      telurG: telur,
+      fcr: panenKg > 0 ? pakanKg / panenKg : null,
+      durasi: d < 0 ? 0 : d,
+      hargaPakanLengkap: pk.every((e) => e.hargaPerKg != null),
+    );
+  }
 
   // =================== Stok pakan (gudang bersama) ===================
   /// Stok pakan (kg) = pakan masuk ± penyesuaian − pakan diberikan.
@@ -703,13 +989,26 @@ class AppState extends ChangeNotifier {
       }
     }
     out.addAll(_agendaGudang(today));
+    // Piutang yang sudah lama (≥14 hari) perlu ditagih.
+    for (final p in piutang().where((p) => p.umur >= 14)) {
+      out.add(
+        AgendaItem(
+          kind: 'tagih',
+          urgent: p.umur >= 30,
+          title: 'Tagih ${p.nama} ${rupiah(p.total)}',
+          subtitle:
+              '${p.items.length} nota belum lunas • tertua ${p.umur} hari',
+        ),
+      );
+    }
     const order = {
       'panen': 0,
       'stokpakan': 1,
       'segar': 2,
-      'fase': 3,
-      'pakan': 4,
-      'foto': 5,
+      'tagih': 3,
+      'fase': 4,
+      'pakan': 5,
+      'foto': 6,
     };
     out.sort((a, b) => order[a.kind]!.compareTo(order[b.kind]!));
     return out;
@@ -771,6 +1070,8 @@ class AppState extends ChangeNotifier {
         'foto': [for (final e in foto) e.toJson()],
         'mutasi': [for (final e in mutasi) e.toJson()],
         'mutasiPakan': [for (final e in mutasiPakan) e.toJson()],
+        'pembeli': [for (final e in pembeli) e.toJson()],
+        'biaya': [for (final e in biaya) e.toJson()],
         'agendaShownOn': agendaShownOn,
       }),
     );
@@ -814,6 +1115,12 @@ class AppState extends ChangeNotifier {
       mutasiPakan
         ..clear()
         ..addAll(list('mutasiPakan', MutasiPakan.fromJson));
+      pembeli
+        ..clear()
+        ..addAll(list('pembeli', Pembeli.fromJson));
+      biaya
+        ..clear()
+        ..addAll(list('biaya', Biaya.fromJson));
       agendaShownOn = j['agendaShownOn'] as String? ?? '';
     } catch (e) {
       debugPrint('Gagal memuat data tersimpan: $e');
@@ -940,6 +1247,7 @@ class AppState extends ChangeNotifier {
     ..perkiraanPanen = from.perkiraanPanen
     ..catatan = from.catatan
     ..selesai = from.selesai
+    ..tanggalSelesai = from.tanggalSelesai
     ..tujuan = from.tujuan;
 
   Future<void> saveBudidaya(
@@ -1024,16 +1332,27 @@ class AppState extends ChangeNotifier {
     DateTime date,
     double berat,
     String catatan,
-    String jenis,
-  ) async {
+    String jenis, {
+    double? hargaPerKg,
+  }) async {
     final list = isPakan ? pakan : panen;
+    // Harga pakan dibekukan saat dicatat: bawaan = rata-rata pembelian.
+    if (isPakan && old == null) hargaPerKg ??= hargaPakanRata();
+    if (isPakan && old != null) hargaPerKg ??= old.hargaPerKg;
+    if (hargaPerKg != null) {
+      hargaPerKg = (hargaPerKg * 100).roundToDouble() / 100;
+    }
     if (online) {
       final path = isPakan ? '/pakan' : '/panen';
       final body = {
         'budidaya_id': budidayaId,
         'tanggal': apiDate(date),
         'catatan': catatan,
-        if (isPakan) ...{'jenis': jenis, 'berat': berat},
+        if (isPakan) ...{
+          'jenis': jenis,
+          'berat': berat,
+          'harga_per_kg': hargaPerKg,
+        },
         if (!isPakan) ...{
           'produk': jenis.isEmpty ? 'Maggot segar' : jenis,
           'jumlah': berat,
@@ -1052,19 +1371,31 @@ class AppState extends ChangeNotifier {
           ..tanggal = c.tanggal
           ..berat = c.berat
           ..catatan = c.catatan
-          ..jenis = c.jenis;
+          ..jenis = c.jenis
+          ..hargaPerKg = c.hargaPerKg;
       }
       notifyListeners();
       return;
     }
     if (old == null) {
-      list.add(Catatan(_next(list), budidayaId, date, berat, catatan, jenis));
+      list.add(
+        Catatan(
+          _next(list),
+          budidayaId,
+          date,
+          berat,
+          catatan,
+          jenis,
+          isPakan ? hargaPerKg : null,
+        ),
+      );
     } else {
       old.budidayaId = budidayaId;
       old.tanggal = date;
       old.berat = berat;
       old.catatan = catatan;
       old.jenis = jenis;
+      if (isPakan) old.hargaPerKg = hargaPerKg;
     }
     notifyListeners();
   }
@@ -1088,11 +1419,13 @@ class AppState extends ChangeNotifier {
     required double harga,
     required bool lunas,
     required String catatan,
+    int? pembeliId,
   }) async {
     if (online) {
       final body = {
         'tanggal': apiDate(tanggal),
         'pembeli': pembeli,
+        'pembeli_id': pembeliId,
         'produk': produk,
         'jumlah': berat,
         'harga': harga,
@@ -1115,7 +1448,9 @@ class AppState extends ChangeNotifier {
           ..berat = p.berat
           ..harga = p.harga
           ..lunas = p.lunas
-          ..catatan = p.catatan;
+          ..catatan = p.catatan
+          ..pembeliId = p.pembeliId
+          ..tanggalLunas = p.tanggalLunas;
       }
       notifyListeners();
       return;
@@ -1131,6 +1466,8 @@ class AppState extends ChangeNotifier {
           harga,
           lunas: lunas,
           catatan: catatan,
+          pembeliId: pembeliId,
+          tanggalLunas: lunas ? DateTime.now() : null,
         ),
       );
     } else {
@@ -1140,8 +1477,12 @@ class AppState extends ChangeNotifier {
         ..produk = produk
         ..berat = berat
         ..harga = harga
-        ..lunas = lunas
-        ..catatan = catatan;
+        ..catatan = catatan
+        ..pembeliId = pembeliId;
+      if (old.lunas != lunas) {
+        old.tanggalLunas = lunas ? DateTime.now() : null;
+      }
+      old.lunas = lunas;
     }
     notifyListeners();
   }
@@ -1154,9 +1495,15 @@ class AppState extends ChangeNotifier {
 
   Future<void> finish(Budidaya item) async {
     if (online) {
-      await _remote((a) => a.put('/budidaya/${item.id}', {'selesai': true}));
+      final j = await _remote(
+        (a) => a.put('/budidaya/${item.id}', {'selesai': true}),
+      );
+      _salinBudidaya(item, budidayaApi(_data(j)));
+    } else {
+      item
+        ..selesai = true
+        ..tanggalSelesai = DateTime.now();
     }
-    item.selesai = true;
     notifyListeners();
   }
 

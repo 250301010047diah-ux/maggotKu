@@ -64,6 +64,7 @@ class Budidaya {
     this.catatan,
     this.selesai, {
     this.tujuan = 'fresh',
+    this.tanggalSelesai,
   });
   final int id;
   String nama, catatan;
@@ -72,6 +73,9 @@ class Budidaya {
   double? beratAwal;
   DateTime? perkiraanPanen;
   bool selesai;
+
+  /// Kapan siklus ditandai selesai (dari server).
+  DateTime? tanggalSelesai;
 
   /// Tujuan siklus: lihat [tujuanList].
   String tujuan;
@@ -86,6 +90,7 @@ class Budidaya {
     'catatan': catatan,
     'selesai': selesai,
     'tujuan': tujuan,
+    'tanggalSelesai': tanggalSelesai?.toIso8601String(),
   };
   factory Budidaya.fromJson(Map<String, dynamic> j) => Budidaya(
     j['id'] as int,
@@ -101,6 +106,7 @@ class Budidaya {
       final t? when tujuanList.contains(t) => t,
       _ => 'fresh',
     },
+    tanggalSelesai: _dtn(j['tanggalSelesai']),
   );
 }
 
@@ -191,12 +197,19 @@ class Catatan {
     this.berat,
     this.catatan, [
     this.jenis = '',
+    this.hargaPerKg,
   ]);
   final int id;
   int budidayaId;
   DateTime tanggal;
   double berat;
   String catatan, jenis;
+
+  /// Pakan: harga per kg saat diberikan (dibekukan di server).
+  double? hargaPerKg;
+
+  /// Biaya pakan catatan ini (0 bila harga tidak diketahui).
+  double get biaya => (hargaPerKg ?? 0) * berat;
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -205,6 +218,7 @@ class Catatan {
     'berat': berat,
     'catatan': catatan,
     'jenis': jenis,
+    'hargaPerKg': hargaPerKg,
   };
   factory Catatan.fromJson(Map<String, dynamic> j) => Catatan(
     j['id'] as int,
@@ -213,6 +227,7 @@ class Catatan {
     _d(j['berat']),
     j['catatan'] as String? ?? '',
     _produkLama(j['jenis'] as String? ?? ''),
+    _dn(j['hargaPerKg']),
   );
 }
 
@@ -226,13 +241,23 @@ class Penjualan {
     this.harga, {
     this.lunas = true,
     this.catatan = '',
+    this.pembeliId,
+    this.tanggalLunas,
   });
   final int id;
   DateTime tanggal;
   String pembeli, produk, catatan;
   double berat, harga;
   bool lunas;
+
+  /// Pembeli tetap (null = pembeli lepas, hanya nama).
+  int? pembeliId;
+  DateTime? tanggalLunas;
   double get total => berat * harga;
+
+  /// Umur piutang dalam hari (0 bila sudah lunas).
+  int get umurPiutang =>
+      lunas ? 0 : DateTime.now().difference(tanggal).inDays.clamp(0, 99999);
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -243,6 +268,8 @@ class Penjualan {
     'harga': harga,
     'lunas': lunas,
     'catatan': catatan,
+    'pembeliId': pembeliId,
+    'tanggalLunas': tanggalLunas?.toIso8601String(),
   };
   factory Penjualan.fromJson(Map<String, dynamic> j) => Penjualan(
     j['id'] as int,
@@ -253,6 +280,8 @@ class Penjualan {
     _d(j['harga']),
     lunas: j['lunas'] as bool? ?? true,
     catatan: j['catatan'] as String? ?? '',
+    pembeliId: j['pembeliId'] as int?,
+    tanggalLunas: _dtn(j['tanggalLunas']),
   );
 }
 
@@ -389,6 +418,7 @@ Budidaya budidayaApi(Map<String, dynamic> j) => Budidaya(
   j['catatan'] as String? ?? '',
   j['selesai'] == true || j['selesai'] == 1,
   tujuan: tujuanList.contains(j['tujuan']) ? j['tujuan'] as String : 'fresh',
+  tanggalSelesai: _dtn(j['tanggal_selesai']),
 );
 
 Catatan pakanApi(Map<String, dynamic> j) => Catatan(
@@ -398,6 +428,7 @@ Catatan pakanApi(Map<String, dynamic> j) => Catatan(
   _d(j['berat']),
   j['catatan'] as String? ?? '',
   j['jenis'] as String? ?? '',
+  _dn(j['harga_per_kg']),
 );
 
 /// Panen: kolom produk & jumlah disimpan di jenis & berat.
@@ -419,6 +450,8 @@ Penjualan penjualanApi(Map<String, dynamic> j) => Penjualan(
   _d(j['harga']),
   lunas: j['lunas'] == true || j['lunas'] == 1,
   catatan: j['catatan'] as String? ?? '',
+  pembeliId: j['pembeli_id'] as int?,
+  tanggalLunas: _dtn(j['tanggal_lunas']),
 );
 
 Mutasi mutasiApi(Map<String, dynamic> j) => Mutasi(
@@ -527,3 +560,110 @@ class MutasiPakan {
 }
 
 MutasiPakan mutasiPakanApi(Map<String, dynamic> j) => MutasiPakan.fromJson(j);
+
+// =====================================================================
+// Pembeli tetap (daftar pembeli, piutang & tagih via WhatsApp)
+// =====================================================================
+class Pembeli {
+  Pembeli(
+    this.id,
+    this.nama, {
+    this.noHp = '',
+    this.alamat = '',
+    this.catatan = '',
+  });
+  final int id;
+  String nama, noHp, alamat, catatan;
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'nama': nama,
+    'noHp': noHp,
+    'alamat': alamat,
+    'catatan': catatan,
+  };
+  factory Pembeli.fromJson(Map<String, dynamic> j) => Pembeli(
+    j['id'] as int,
+    j['nama'] as String,
+    noHp: j['noHp'] as String? ?? '',
+    alamat: j['alamat'] as String? ?? '',
+    catatan: j['catatan'] as String? ?? '',
+  );
+}
+
+Pembeli pembeliApi(Map<String, dynamic> j) => Pembeli(
+  j['id'] as int,
+  j['nama'] as String,
+  noHp: j['no_hp'] as String? ?? '',
+  alamat: j['alamat'] as String? ?? '',
+  catatan: j['catatan'] as String? ?? '',
+);
+
+/// Nomor HP Indonesia → format wa.me (08xx → 628xx). null bila kosong.
+String? nomorWa(String hp) {
+  var d = hp.replaceAll(RegExp(r'[^0-9]'), '');
+  if (d.isEmpty) return null;
+  if (d.startsWith('0')) d = '62${d.substring(1)}';
+  if (d.startsWith('8')) d = '62$d';
+  return d;
+}
+
+// =====================================================================
+// Biaya di luar pakan (bibit, tenaga, listrik…)
+// =====================================================================
+const biayaKategoriList = [
+  'Bibit/telur',
+  'Tenaga kerja',
+  'Listrik & air',
+  'Peralatan',
+  'Transport',
+  'Lainnya',
+];
+
+class Biaya {
+  Biaya(
+    this.id,
+    this.tanggal,
+    this.kategori,
+    this.jumlah, {
+    this.budidayaId,
+    this.keterangan = '',
+  });
+  final int id;
+  DateTime tanggal;
+  String kategori, keterangan;
+
+  /// Rupiah.
+  double jumlah;
+
+  /// null = biaya umum (tidak terikat satu siklus).
+  int? budidayaId;
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'tanggal': tanggal.toIso8601String(),
+    'kategori': kategori,
+    'jumlah': jumlah,
+    'budidayaId': budidayaId,
+    'keterangan': keterangan,
+  };
+  factory Biaya.fromJson(Map<String, dynamic> j) => Biaya(
+    j['id'] as int,
+    _dt(j['tanggal']),
+    j['kategori'] as String? ?? 'Lainnya',
+    _d(j['jumlah']),
+    budidayaId: j['budidayaId'] as int?,
+    keterangan: j['keterangan'] as String? ?? '',
+  );
+}
+
+Biaya biayaApi(Map<String, dynamic> j) => Biaya(
+  j['id'] as int,
+  _dt(j['tanggal']),
+  biayaKategoriList.contains(j['kategori'])
+      ? j['kategori'] as String
+      : 'Lainnya',
+  _d(j['jumlah']),
+  budidayaId: j['budidaya_id'] as int?,
+  keterangan: j['keterangan'] as String? ?? '',
+);

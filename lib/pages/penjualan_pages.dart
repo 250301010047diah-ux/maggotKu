@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import 'biaya_pages.dart';
+import 'pembeli_pages.dart';
 import 'stok_pages.dart';
 import '../data/app_state.dart';
 import '../data/models.dart';
@@ -52,6 +54,7 @@ class _PenjualanPageState extends State<PenjualanPage> {
     final piutang = s.pendapatan(items.where((e) => !e.lunas));
     final perProduk = s.pendapatanPerProduk(items);
     final pembeli = s.topPembeli(items);
+    final tagihan = s.piutang();
 
     return Scaffold(
       floatingActionButton: GradientFab(
@@ -147,11 +150,60 @@ class _PenjualanPageState extends State<PenjualanPage> {
                     value: rupiahSingkat(piutang),
                     icon: Icons.hourglass_bottom_rounded,
                     color: peach,
+                    onTap: () => openPage(context, const PembeliPage()),
                   ),
                 ),
               ],
             ),
           ),
+          gap(12),
+          FadeSlideIn(
+            delay: 1,
+            child: Row(
+              children: [
+                Expanded(
+                  child: _Shortcut(
+                    icon: Icons.groups_rounded,
+                    title: 'Pembeli',
+                    sub: '${s.pembeli.length} tetap',
+                    onTap: () => openPage(context, const PembeliPage()),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _Shortcut(
+                    icon: Icons.account_balance_wallet_rounded,
+                    title: 'Biaya & Laba',
+                    sub: 'Untung bersih',
+                    onTap: () => openPage(context, const BiayaPage()),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ---------- Piutang ----------
+          if (tagihan.isNotEmpty) ...[
+            SectionTitle(
+              'Perlu ditagih',
+              action: 'Semua',
+              onAction: () => openPage(context, const PembeliPage()),
+            ),
+            for (final (i, p) in tagihan.take(2).indexed)
+              FadeSlideIn(
+                delay: 2 + i,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: PiutangCard(
+                    nama: p.nama,
+                    pembeli: p.pembeli,
+                    total: p.total,
+                    umur: p.umur,
+                    items: p.items,
+                  ),
+                ),
+              ),
+          ],
 
           // ---------- Stok ----------
           SectionTitle(
@@ -250,6 +302,54 @@ class _PenjualanPageState extends State<PenjualanPage> {
   }
 }
 
+class _Shortcut extends StatelessWidget {
+  const _Shortcut({
+    required this.icon,
+    required this.title,
+    required this.sub,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String title, sub;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => GlassCard(
+    onTap: onTap,
+    padding: const EdgeInsets.all(14),
+    child: Row(
+      children: [
+        IconBubble(icon, color: champagne, size: 40),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: headFont,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  letterSpacing: -0.2,
+                  color: ink,
+                ),
+              ),
+              Text(
+                sub,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11.5, color: muted),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 class _BuyerRow extends StatelessWidget {
   const _BuyerRow({
     required this.rank,
@@ -335,15 +435,24 @@ class _BuyerRow extends StatelessWidget {
 // Form penjualan
 // =====================================================================
 class PenjualanFormPage extends StatefulWidget {
-  const PenjualanFormPage({super.key, this.item});
+  const PenjualanFormPage({super.key, this.item, this.initialPembeli});
   final Penjualan? item;
+  final Pembeli? initialPembeli;
   @override
   State<PenjualanFormPage> createState() => _PenjualanFormPageState();
 }
 
 class _PenjualanFormPageState extends State<PenjualanFormPage> {
   final key = GlobalKey<FormState>();
-  late final pembeli = TextEditingController(text: widget.item?.pembeli);
+  late final pembeli = TextEditingController(
+    text: widget.item?.pembeli ?? widget.initialPembeli?.nama,
+  );
+
+  /// Pembeli tetap terpilih (null = pembeli lepas).
+  late int? pembeliId = widget.item?.pembeliId ?? widget.initialPembeli?.id;
+
+  /// Simpan nama baru ke daftar pembeli tetap.
+  bool simpanPembeli = false;
   late final berat = TextEditingController(
     text: widget.item == null ? '' : _num(widget.item!.berat),
   );
@@ -387,10 +496,15 @@ class _PenjualanFormPageState extends State<PenjualanFormPage> {
     if (!key.currentState!.validate()) return;
     final s = AppScope.of(context);
     final nav = Navigator.of(context);
-    final ok = await kirim(
-      context,
-      () => s.savePenjualan(
+    final ok = await kirim(context, () async {
+      var id = pembeliId;
+      if (id == null && simpanPembeli) {
+        id = (await s.savePembeli(null, nama: pembeli.text.trim())).id;
+        pembeliId = id;
+      }
+      await s.savePenjualan(
         widget.item,
+        pembeliId: id,
         tanggal: tanggal,
         pembeli: pembeli.text.trim(),
         produk: produk,
@@ -398,8 +512,8 @@ class _PenjualanFormPageState extends State<PenjualanFormPage> {
         harga: number(harga.text)!,
         lunas: lunas,
         catatan: catatan.text.trim(),
-      ),
-    );
+      );
+    });
     if (!ok || !mounted) return;
     final saved = widget.item ?? s.penjualan.last;
     nav.pop();
@@ -503,14 +617,59 @@ class _PenjualanFormPageState extends State<PenjualanFormPage> {
                       }),
                     ),
                     gap(18),
+                    _PembeliPicker(
+                      selected: pembeliId,
+                      onPick: (p) => setState(() {
+                        pembeliId = p.id;
+                        pembeli.text = p.nama;
+                        simpanPembeli = false;
+                      }),
+                    ),
                     TextFormField(
                       controller: pembeli,
-                      decoration: const InputDecoration(
+                      textCapitalization: TextCapitalization.words,
+                      onChanged: (v) {
+                        // Nama diubah manual → bukan pembeli tetap lagi.
+                        final p = AppScope.of(context).pembeliById(pembeliId);
+                        if (p != null && p.nama != v.trim()) {
+                          setState(() => pembeliId = null);
+                        } else {
+                          setState(() {});
+                        }
+                      },
+                      decoration: InputDecoration(
                         labelText: 'Nama pembeli',
-                        prefixIcon: Icon(Icons.person_outline_rounded),
+                        prefixIcon: const AppIcon(Icons.person_outline_rounded),
+                        suffixIcon: pembeliId != null
+                            ? const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: AppIcon(
+                                  Icons.verified_rounded,
+                                  size: 20,
+                                  color: forest,
+                                ),
+                              )
+                            : null,
                       ),
                       validator: requiredText,
                     ),
+                    if (pembeliId == null &&
+                        pembeli.text.trim().isNotEmpty) ...[
+                      gap(6),
+                      CheckboxListTile(
+                        value: simpanPembeli,
+                        onChanged: (v) =>
+                            setState(() => simpanPembeli = v ?? false),
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        activeColor: emerald,
+                        title: const Text(
+                          'Simpan ke daftar pembeli tetap',
+                          style: TextStyle(fontSize: 13, color: ink),
+                        ),
+                      ),
+                    ],
                     gap(14),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -523,7 +682,7 @@ class _PenjualanFormPageState extends State<PenjualanFormPage> {
                             ),
                             decoration: InputDecoration(
                               labelText: 'Jumlah (${satuan(produk)})',
-                              prefixIcon: const Icon(Icons.scale_rounded),
+                              prefixIcon: const AppIcon(Icons.scale_rounded),
                             ),
                             validator: (v) {
                               final e = positive(v);
@@ -547,7 +706,9 @@ class _PenjualanFormPageState extends State<PenjualanFormPage> {
                             ),
                             decoration: InputDecoration(
                               labelText: 'Harga/${satuan(produk)}',
-                              prefixIcon: const Icon(Icons.payments_outlined),
+                              prefixIcon: const AppIcon(
+                                Icons.payments_outlined,
+                              ),
                             ),
                             validator: positive,
                           ),
@@ -594,7 +755,11 @@ class _PenjualanFormPageState extends State<PenjualanFormPage> {
                                 ),
                                 Text(
                                   lunas
-                                      ? 'Pembayaran sudah diterima'
+                                      ? (widget.item?.lunas == true &&
+                                                widget.item?.tanggalLunas !=
+                                                    null
+                                            ? 'Dibayar ${tanggalPanjang(widget.item!.tanggalLunas!)}'
+                                            : 'Pembayaran sudah diterima')
                                       : 'Masih tercatat sebagai piutang',
                                   style: const TextStyle(
                                     fontSize: 12,
@@ -618,7 +783,7 @@ class _PenjualanFormPageState extends State<PenjualanFormPage> {
                       maxLines: 2,
                       decoration: const InputDecoration(
                         labelText: 'Catatan (opsional)',
-                        prefixIcon: Icon(Icons.notes_rounded),
+                        prefixIcon: AppIcon(Icons.notes_rounded),
                       ),
                     ),
                     gap(22),
@@ -637,11 +802,61 @@ class _PenjualanFormPageState extends State<PenjualanFormPage> {
   }
 }
 
+/// Pilihan cepat pembeli tetap (+ tombol tambah baru).
+class _PembeliPicker extends StatelessWidget {
+  const _PembeliPicker({required this.selected, required this.onPick});
+  final int? selected;
+  final ValueChanged<Pembeli> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppScope.of(context);
+    // Pembeli yang paling sering bertransaksi tampil duluan.
+    final list = [...s.pembeli]
+      ..sort(
+        (a, b) => s.penjualanOf(b).length.compareTo(s.penjualanOf(a).length),
+      );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: SizedBox(
+        height: 40,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          children: [
+            ChoiceTile(
+              label: 'Baru',
+              icon: Icons.add_rounded,
+              selected: false,
+              onTap: () async {
+                final p = await Navigator.push<Pembeli>(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PembeliFormPage()),
+                );
+                if (p != null) onPick(p);
+              },
+            ),
+            for (final p in list) ...[
+              const SizedBox(width: 8),
+              ChoiceTile(
+                label: p.nama,
+                icon: Icons.person_rounded,
+                selected: p.id == selected,
+                onTap: () => onPick(p),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Pop-up struk setelah transaksi tersimpan (di dalam aplikasi).
 Future<void> showStruk(BuildContext context, Penjualan p, double sisaStok) {
   final u = satuan(p.produk);
   final teks = StringBuffer()
-    ..writeln('🧾 *Struk MaggotKu*')
+    ..writeln('🧾 *Struk MaggotTrack*')
     ..writeln(tanggalPanjang(p.tanggal))
     ..writeln()
     ..writeln('Pembeli : ${p.pembeli}')
@@ -764,7 +979,10 @@ Future<void> showStruk(BuildContext context, Penjualan p, double sisaStok) {
                           onPressed: () => SharePlus.instance.share(
                             ShareParams(text: teks.toString()),
                           ),
-                          icon: const Icon(Icons.ios_share_rounded, size: 18),
+                          icon: const AppIcon(
+                            Icons.ios_share_rounded,
+                            size: 18,
+                          ),
                           label: const Text('Bagikan'),
                         ),
                       ),

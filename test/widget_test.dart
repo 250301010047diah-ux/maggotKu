@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'icon_finder.dart';
 import 'package:maggotku/data/app_state.dart';
 import 'package:maggotku/main.dart';
 import 'package:maggotku/pages/home_page.dart';
@@ -49,7 +50,7 @@ void main() {
     expect(find.byType(ElegantNavBar), findsOneWidget);
 
     // pindah ke tab penjualan
-    await tester.tap(find.byIcon(Icons.payments_rounded).last);
+    await tester.tap(findIcon(Icons.payments_rounded).last);
     await settle(tester);
     expect(find.text('Penjualan'), findsWidgets);
   });
@@ -66,7 +67,7 @@ void main() {
       Icons.person_rounded,
       Icons.home_rounded,
     ]) {
-      await tester.tap(find.byIcon(icon).last);
+      await tester.tap(findIcon(icon).last);
       await settle(tester);
       // gulir sampai bawah supaya semua kartu ikut dirender
       await tester.drag(find.byType(Scrollable).first, const Offset(0, -3000));

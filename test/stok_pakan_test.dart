@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'icon_finder.dart';
 import 'package:maggotku/data/app_state.dart';
 import 'package:maggotku/main.dart';
 import 'package:maggotku/pages/stok_pakan_pages.dart';
@@ -118,7 +119,7 @@ void main() {
         await t.pump(const Duration(milliseconds: 100));
       }
     }
-    await t.tap(find.byIcon(Icons.edit_note_rounded).last);
+    await t.tap(findIcon(Icons.edit_note_rounded).last);
     for (var i = 0; i < 8; i++) {
       await t.pump(const Duration(milliseconds: 100));
     }

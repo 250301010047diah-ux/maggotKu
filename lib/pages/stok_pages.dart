@@ -418,7 +418,7 @@ class _OlahPageState extends State<OlahPage> {
                       ),
                       decoration: const InputDecoration(
                         labelText: 'Maggot fresh yang diolah (kg)',
-                        prefixIcon: Icon(Icons.scale_rounded),
+                        prefixIcon: AppIcon(Icons.scale_rounded),
                       ),
                       validator: (v) {
                         final e = positive(v);
@@ -440,7 +440,7 @@ class _OlahPageState extends State<OlahPage> {
                         labelText: 'Hasil maggot kering (kg)',
                         helperText:
                             'Otomatis ±1/3 dari berat fresh, bisa diubah',
-                        prefixIcon: Icon(Icons.wb_sunny_rounded),
+                        prefixIcon: AppIcon(Icons.wb_sunny_rounded),
                       ),
                       validator: (v) {
                         final e = positive(v);
@@ -596,7 +596,7 @@ class _PenyesuaianPageState extends State<PenyesuaianPage> {
                       decoration: InputDecoration(
                         labelText: 'Jumlah (${satuan(produk)})',
                         helperText: 'Stok sekarang: ${qty(produk, stokNow)}',
-                        prefixIcon: const Icon(Icons.inventory_2_outlined),
+                        prefixIcon: const AppIcon(Icons.inventory_2_outlined),
                       ),
                       validator: (v) {
                         final e = positive(v);

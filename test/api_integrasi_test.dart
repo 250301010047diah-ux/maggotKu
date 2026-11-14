@@ -30,6 +30,8 @@ class FakeServer {
     'mutasi': [],
     'foto': [],
     'mutasi-pakan': [],
+    'pembeli': [],
+    'biaya': [],
   };
   final log = <String>[];
   int _id = 100;

@@ -43,7 +43,7 @@ class _MaggotKuAppState extends State<MaggotKuApp> {
     state: state,
     child: MaterialApp(
       navigatorKey: _nav,
-      title: 'MaggotKu',
+      title: 'MaggotTrack',
       debugShowCheckedModeBanner: false,
       theme: appTheme,
       // Belum login → onboarding setiap kali aplikasi dibuka, lalu Login.

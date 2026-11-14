@@ -38,7 +38,7 @@ class _KandangListPageState extends State<KandangListPage> {
             child: TextField(
               decoration: const InputDecoration(
                 hintText: 'Cari kandang atau lokasi…',
-                prefixIcon: Icon(Icons.search_rounded),
+                prefixIcon: AppIcon(Icons.search_rounded),
               ),
               onChanged: (v) => setState(() => query = v),
             ),
@@ -100,7 +100,7 @@ class _KandangCard extends StatelessWidget {
                     ),
                     Row(
                       children: [
-                        const Icon(
+                        const AppIcon(
                           Icons.location_on_rounded,
                           size: 13,
                           color: muted,
@@ -256,7 +256,7 @@ class _KandangFormPageState extends State<KandangFormPage> {
                     controller: nama,
                     decoration: const InputDecoration(
                       labelText: 'Nama atau kode kandang',
-                      prefixIcon: Icon(Icons.warehouse_outlined),
+                      prefixIcon: AppIcon(Icons.warehouse_outlined),
                     ),
                     validator: requiredText,
                   ),
@@ -265,7 +265,7 @@ class _KandangFormPageState extends State<KandangFormPage> {
                     controller: lokasi,
                     decoration: const InputDecoration(
                       labelText: 'Lokasi',
-                      prefixIcon: Icon(Icons.location_on_outlined),
+                      prefixIcon: AppIcon(Icons.location_on_outlined),
                     ),
                     validator: requiredText,
                   ),
@@ -277,7 +277,7 @@ class _KandangFormPageState extends State<KandangFormPage> {
                     ),
                     decoration: const InputDecoration(
                       labelText: 'Kapasitas (kg, opsional)',
-                      prefixIcon: Icon(Icons.inventory_2_outlined),
+                      prefixIcon: AppIcon(Icons.inventory_2_outlined),
                     ),
                     validator: (v) =>
                         v != null && v.isNotEmpty && positive(v) != null
@@ -290,7 +290,7 @@ class _KandangFormPageState extends State<KandangFormPage> {
                     maxLines: 3,
                     decoration: const InputDecoration(
                       labelText: 'Catatan (opsional)',
-                      prefixIcon: Icon(Icons.notes_rounded),
+                      prefixIcon: AppIcon(Icons.notes_rounded),
                     ),
                   ),
                   gap(22),
